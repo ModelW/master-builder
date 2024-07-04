@@ -1,0 +1,115 @@
+[tool.poetry]
+name = "master-builder"
+version = "0.1.0"
+description = "Deploy and manage your applications on a single VM with Docker Compose"
+authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
+license = "WTFPL"
+readme = "README.md"
+packages = [{ include = "master_builder", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+rich-click = "*"
+rich = "*"
+pyyaml = "*"
+types-pyyaml = "*"
+
+[tool.poetry.scripts]
+master-builder = "master_builder.cli:cli"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # McCabe Complexity
+    "C90",
+    # Async
+    "ASYNC",
+    # Bandit
+    "S",
+    # Builtins
+    "A",
+    # Comprehensions
+    "C4",
+    # Datetime
+    "DTZ",
+    # Debugger
+    "T10",
+    # Error Messages
+    "EM",
+    # Executable (just in case)
+    "EXE",
+    # Logging
+    "G",
+    # PEP 420
+    "INP",
+    # No print
+    "T20",
+    # Pytest
+    "PT",
+    # Return style
+    "RET",
+    # Private member access
+    "SLF",
+    # Slots
+    "SLOT",
+    # Simplify
+    "SIM",
+    # Clean imports
+    "TID",
+    # Type checking blocks
+    "TCH",
+    # Use pathlib pedantism
+    "PTH",
+    # Don't allow TODO in code
+    "FIX",
+    # Don't comment code
+    "ERA",
+    # Exception anti-patterns
+    "TRY",
+    # Performance anti-patterns
+    "PERF",
+    # Ruff stuff
+    "RUF",
+]
+ignore = [
+    "ANN101",
+    "ANN102",
+    "ANN401",
+    "TRY003",
+    "C408",
+    "D401",
+    "SIM108",
+    "PERF203",
+    "TRY004",
+    "RET505",
+    "S607",
+    "S603",
+    "SIM103",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.mypy]
+[[tool.mypy.overrides]]
+module = "importlib_metadata"
+ignore_missing_imports = true
+
