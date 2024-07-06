@@ -157,3 +157,93 @@ master-builder ingress update
 
 > **Note** &mdash; This will pull the newest Traefik image and if the ingress is
 > started it will be restarted.
+
+## Usage with GitHub Actions
+
+The goal is to make it easy to deploy from GitHub Actions, as well as help you
+running the project locally if you want.
+
+All is based up on the `docker-compose.yml` file at the root of your repo. It
+will get automatically transformed in the following way:
+
+-   Instead of building the images, it will expect to find them in the registry
+    (more on that later)
+-   Each `.env` file will be fed from the GitHub secrets and inserted into the
+    compose file (which is due to the way our deployments work)
+-   Volumes are not supported, so if you have volumes expect failure
+-   All services will be added to the `traefik` network automatically
+
+The general idea is to have a `docker-compose.yml` that serves as a base to
+declare all non-persistent services and then potentially have a
+`docker-compose.override.yml` to setup your local environment from that base.
+
+Then you can create a GHA workflow that looks like this:
+
+```yaml
+name: Master Builder Deployment
+
+on:
+    push:
+        branches:
+            - production
+            - staging
+    workflow_dispatch:
+
+jobs:
+    prepare:
+        name: Prepare
+        runs-on: ubuntu-latest
+        outputs:
+            services: ${{ steps.set-services.outputs.services }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Get services from docker-compose
+              id: set-services
+              run: |
+                  services=$(docker compose -f docker-compose.yaml config --format json | jq -c '[.services | to_entries[] | select(.value.build != null) | .value.build | if type == "string" then {name: (. | split("/") | last), context: ., dockerfile: "Dockerfile"} else {name: (.context | split("/") | last), context: .context, dockerfile: (.dockerfile // "Dockerfile")} end] | unique')
+                  echo "services=$services" >> $GITHUB_OUTPUT
+
+    build:
+        name: Build ${{ matrix.service.name }}
+        runs-on: ubuntu-latest
+        needs: prepare
+        strategy:
+            matrix:
+                service: ${{ fromJson(needs.prepare.outputs.services) }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Private Docker Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: <your-registry>
+                  username: ${{ secrets.REGISTRY_USERNAME }}
+                  password: ${{ secrets.REGISTRY_PASSWORD }}
+
+            - name: Build and push
+              uses: docker/build-push-action@v6
+              with:
+                  context: ${{ matrix.service.context }}
+                  file: ${{ matrix.service.dockerfile }}
+                  push: true
+                  tags: |
+                      <your-registry>/${{ github.event.repository.name }}/${{ matrix.service.name }}:${{ github.ref_name }}
+                      <your-registry>/${{ github.event.repository.name }}/${{ matrix.service.name }}:${{ github.sha }}
+
+    deploy:
+        name: Deploy
+        runs-on: ubuntu-latest
+        needs: build
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Deploy
+              run: ???
+```
