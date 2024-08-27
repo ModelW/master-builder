@@ -58,6 +58,8 @@ class Config:
 
     @persisted.setter
     def persisted(self, value: PersistedConfig):
+        self.config_file.parent.mkdir(parents=True, exist_ok=True)
+
         with self.config_file.open("w") as f:
             yaml.safe_dump(asdict(value), f)
 
