@@ -10,7 +10,7 @@ console = Console()
 TRAEFIK_COMPOSE_HTTP = """---
 services:
   traefik:
-    image: traefik:v2.9
+    image: traefik:v3.1
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -35,7 +35,7 @@ networks:
 TRAEFIK_COMPOSE_HTTPS = """---
 services:
   traefik:
-    image: traefik:v2.9
+    image: traefik:v3.1
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
