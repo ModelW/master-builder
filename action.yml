@@ -1,0 +1,58 @@
+name: "Master Builder"
+description: "Deploy the current repo to a server using Master Builder"
+author: "WITH"
+
+branding:
+    icon: "sunrise"
+    color: "blue"
+
+inputs:
+    compose_dir:
+        description: "The directory holding the compose file"
+        default: "."
+    image_tpl:
+        description: "The image template to use"
+        required: true
+    env:
+        description:
+            "A YAML-encoded object containing all environment variables for the
+            various components"
+        required: false
+    ssh_url:
+        description:
+            "A SSH URL: ssh://user@host:port. If you specify a password, it will
+            either be used as a passphrase for the private key (if provided) or
+            as a password when connecting."
+        required: true
+    ssh_private_key:
+        description: "The SSH private key to use"
+        required: false
+        default: ""
+    master_builder_command:
+        description:
+            "How to run Master Builder. Uses the latest version via uvx by
+            default, make sure to have uvx on your server."
+        default:
+            "uvx --from
+            https://github.com/ModelW/master-builder/archive/refs/heads/develop.zip
+            master-builder"
+    project_name:
+        description:
+            "The name of the project to deploy. Takes the repo name if empty."
+        default: ""
+    before:
+        description:
+            "Commands to run before deployment (one per line) in the
+            service:command format"
+        required: false
+        default: ""
+    after:
+        description:
+            "Commands to run after deployment (one per line) in the
+            service:command format"
+        required: false
+        default: ""
+
+runs:
+    using: "node20"
+    main: "action/dist/index.js"

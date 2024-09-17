@@ -1,0 +1,16 @@
+services:
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.caddy.rule=Host(`caddy.localhost`)"
+      - "traefik.http.routers.caddy.entrypoints=web"
+      - "traefik.http.services.caddy.loadbalancer.server.port=80"
+
+networks:
+  traefik:
+    external: true
+    name: traefik

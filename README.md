@@ -244,6 +244,17 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Deploy
-              run: ???
+            - name: Deploy using Master Builder
+              uses: modelw/master-builder@develop
+              with:
+                  image_tpl:
+                      "<your-registry>/${{ github.event.repository.name }}/{{
+                      .service.name }}:${{ github.sha }}"
+                  env: "${{ secrets.MASTER_BUILDER_ENV }}"
+                  ssh_url: "ssh://user@host"
+                  ssh_private_key:
+                      "${{ secrets.MASTER_BUILDER_SSH_PRIVATE_KEY }}"
+                  before: "api:./manage.py migrate"
 ```
+
+See the [action documentation](action/README.md) for more details.

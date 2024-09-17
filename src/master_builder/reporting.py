@@ -11,7 +11,7 @@ from rich.traceback import Traceback
 
 from .errors import ErrorForUser
 
-console = Console()
+console = Console(force_terminal=True)
 
 
 def handle_fatal(func: Callable):
