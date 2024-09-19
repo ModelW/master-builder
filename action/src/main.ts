@@ -94,7 +94,8 @@ export async function main(): Promise<void> {
         );
 
         if (!outcome.success) {
-            core.setFailed(`Master Builder failed:\n${outcome.stderr}`);
+            // noinspection ExceptionCaughtLocallyJS
+            throw new Error(`Master Builder failed:\n${outcome.stderr}`);
         }
     } catch (e) {
         if (e instanceof Error) {

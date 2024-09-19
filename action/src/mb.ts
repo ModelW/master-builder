@@ -183,7 +183,7 @@ export function deploy(
 
             reporter(`Running: ${cmd}`);
 
-            conn.exec(cmd, (err, stream) => {
+            conn.exec(shQuote(cmd), (err, stream) => {
                 if (err) {
                     reject(err);
                 }
