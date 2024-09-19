@@ -53304,8 +53304,9 @@ function deploy(host, deploy, reporter) {
                     reporter(data.toString());
                 });
                 stream.on("close", (code) => {
+                    var _a;
                     resolve({
-                        stderr: stream.stderr.read().toString(),
+                        stderr: ((_a = stream.stderr) === null || _a === void 0 ? void 0 : _a.read().toString()) || "",
                         success: code === 0,
                     });
                 });

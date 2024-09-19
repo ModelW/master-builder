@@ -202,7 +202,7 @@ export function deploy(
 
                 stream.on("close", (code: number) => {
                     resolve({
-                        stderr: stream.stderr.read().toString(),
+                        stderr: stream.stderr?.read().toString() || "",
                         success: code === 0,
                     });
                 });
