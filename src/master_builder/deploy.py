@@ -13,7 +13,7 @@ from .errors import ErrorForUser
 from .ingress import ensure_network, start_ingress
 from .reporting import action, handle_fatal, run_command, success
 
-console = Console()
+console = Console(force_terminal=True)
 
 
 @click.command()
