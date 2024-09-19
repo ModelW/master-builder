@@ -202,7 +202,11 @@ jobs:
             - name: Get services from docker-compose
               id: set-services
               run: |
-                  services=$(docker compose -f docker-compose.yaml config --format json | jq -c '[.services | to_entries[] | select(.value.build != null) | .value.build | if type == "string" then {name: (. | split("/") | last), context: ., dockerfile: "Dockerfile"} else {name: (.context | split("/") | last), context: .context, dockerfile: (.dockerfile // "Dockerfile")} end] | unique')
+                  services=$(docker compose -f docker-compose.yml config --format json | jq -c --arg cwd "$PWD" '[.services | to_entries[] | select(.value.build) | {
+                    name: .key,
+                    context: (.value.build.context | if startswith($cwd + "/") then sub("^" + $cwd + "/"; "") else . end),
+                    dockerfile: .value.build.dockerfile
+                  }] | unique_by(.context | split("/") | last)')
                   echo "services=$services" >> $GITHUB_OUTPUT
 
     build:
@@ -226,35 +230,56 @@ jobs:
                   username: ${{ secrets.REGISTRY_USERNAME }}
                   password: ${{ secrets.REGISTRY_PASSWORD }}
 
+            - name: Downcase REPO
+              run: |
+                  echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
             - name: Build and push
               uses: docker/build-push-action@v6
               with:
-                  context: ${{ matrix.service.context }}
-                  file: ${{ matrix.service.dockerfile }}
+                  context: "${{ matrix.service.context }}"
+                  file:
+                      "${{ matrix.service.context }}/${{
+                      matrix.service.dockerfile }}"
                   push: true
                   tags: |
-                      <your-registry>/${{ github.event.repository.name }}/${{ matrix.service.name }}:${{ github.ref_name }}
-                      <your-registry>/${{ github.event.repository.name }}/${{ matrix.service.name }}:${{ github.sha }}
+                      <your-registry>/${{ env.REPO }}-${{ matrix.service.name }}:${{ github.ref_name }}
+                      <your-registry>/${{ env.REPO }}-${{ matrix.service.name }}:${{ github.sha }}
 
     deploy:
         name: Deploy
-        runs-on: ubuntu-latest
+        runs-on: bob
         needs: build
         steps:
             - name: Checkout
               uses: actions/checkout@v4
 
+            - name: Pre-compute values
+              run: |
+                  BRANCH_NAME=${GITHUB_REF##*/}
+                  BRANCH_NAME_UPPERCASE=${BRANCH_NAME^^}
+                  echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+                  echo "BRANCH_NAME_UPPERCASE=${BRANCH_NAME_UPPERCASE}" >> $GITHUB_ENV
+                  echo "REPO=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+            - name: Getting Docker Compose
+              run:
+                  "sudo apt-get update && sudo apt-get install -y docker-compose"
+
             - name: Deploy using Master Builder
               uses: modelw/master-builder@develop
               with:
                   image_tpl:
-                      "<your-registry>/${{ github.event.repository.name }}/{{
-                      .service.name }}:${{ github.sha }}"
-                  env: "${{ secrets.MASTER_BUILDER_ENV }}"
-                  ssh_url: "ssh://user@host"
-                  ssh_private_key:
-                      "${{ secrets.MASTER_BUILDER_SSH_PRIVATE_KEY }}"
-                  before: "api:./manage.py migrate"
+                      "<your-registry>/${{ env.REPO }}-{{ .service.name }}:${{
+                      github.sha }}"
+                  env:
+                      "${{ secrets[format('ENV_{0}', env.BRANCH_NAME_UPPERCASE)]
+                      }}"
+                  ssh_url:
+                      "${{ vars[format('SSH_URL_{0}',
+                      env.BRANCH_NAME_UPPERCASE)] }}"
+                  ssh_private_key: "${{ secrets.SSH_PRIVATE_KEY }}"
+                  before: "api:modelw-docker run ./manage.py migrate"
 ```
 
 See the [action documentation](action/README.md) for more details.
