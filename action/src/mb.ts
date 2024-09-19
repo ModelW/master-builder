@@ -89,11 +89,15 @@ type reporter = (message: string) => void;
  * @returns The quoted string
  */
 function shQuote(str: string): string {
-    if (str.includes("'")) {
-        return str.replace(/'/g, `'"'"'`);
-    } else {
+    if (!str) {
+        return "''";
+    }
+
+    if (!/[^\w@%+=:,./-]/.test(str)) {
         return str;
     }
+
+    return "'" + str.replace(/'/g, "'\"'\"'") + "'";
 }
 
 /**
@@ -183,7 +187,7 @@ export function deploy(
 
             reporter(`Running: ${cmd}`);
 
-            conn.exec(shQuote(cmd), (err, stream) => {
+            conn.exec(cmd, (err, stream) => {
                 if (err) {
                     reject(err);
                 }

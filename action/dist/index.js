@@ -53182,7 +53182,8 @@ async function main() {
             core.info(message);
         });
         if (!outcome.success) {
-            core.setFailed(`Master Builder failed:\n${outcome.stderr}`);
+            // noinspection ExceptionCaughtLocallyJS
+            throw new Error(`Master Builder failed:\n${outcome.stderr}`);
         }
     }
     catch (e) {
@@ -53217,12 +53218,13 @@ const ssh2_1 = __nccwpck_require__(8567);
  * @returns The quoted string
  */
 function shQuote(str) {
-    if (str.includes("'")) {
-        return str.replace(/'/g, `'"'"'`);
+    if (!str) {
+        return "''";
     }
-    else {
+    if (!/[^\w@%+=:,./-]/.test(str)) {
         return str;
     }
+    return "'" + str.replace(/'/g, "'\"'\"'") + "'";
 }
 /**
  * Parses a SSH URL into an object which can be used to connect to the server.
