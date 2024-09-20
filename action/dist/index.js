@@ -53384,6 +53384,7 @@ async function mozart(options) {
     patched = await substituteImages(patched, serviceMap, imageTemplate);
     patched = injectEnvironment(patched, serviceMap, options.environments);
     patched = fixName(options.projectName, patched);
+    patched = disarm(patched);
     return JSON.stringify(patched);
 }
 /**
@@ -53523,6 +53524,25 @@ function fixName(projectName, composeFile) {
     hash.update(asString);
     const name = `${projectName}-${hash.digest("hex").slice(0, 8)}`;
     return { ...composeFile, name };
+}
+/**
+ * Docker Compose will look for variables and interpolate them, but we know
+ * that there are no variables. So we escape all the $ in order to get it to
+ * stop messing up with our variables.
+ */
+function disarm(val) {
+    if ((0, obj_manip_1.isObject)(val)) {
+        return Object.fromEntries(Object.entries(val).map(([key, value]) => [key, disarm(value)]));
+    }
+    else if ((0, obj_manip_1.isArray)(val)) {
+        return val.map(disarm);
+    }
+    else if (typeof val === "string") {
+        return val.replace(/\$/g, "$$");
+    }
+    else {
+        return val;
+    }
 }
 
 

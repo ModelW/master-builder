@@ -6,7 +6,7 @@ import {
     Resolver,
 } from "@model-w/hydroyaml/dist/resolving";
 import { fromString } from "@model-w/hydroyaml";
-import { deepResolve, isObject } from "./obj-manip";
+import { deepResolve, isArray, isObject } from "./obj-manip";
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
 
@@ -63,6 +63,7 @@ export async function mozart(options: MozartOptions): Promise<string> {
     patched = await substituteImages(patched, serviceMap, imageTemplate);
     patched = injectEnvironment(patched, serviceMap, options.environments);
     patched = fixName(options.projectName, patched);
+    patched = disarm(patched) as JsonObject;
 
     return JSON.stringify(patched);
 }
@@ -250,4 +251,23 @@ function fixName(projectName: string, composeFile: JsonObject): JsonObject {
     const name = `${projectName}-${hash.digest("hex").slice(0, 8)}`;
 
     return { ...composeFile, name };
+}
+
+/**
+ * Docker Compose will look for variables and interpolate them, but we know
+ * that there are no variables. So we escape all the $ in order to get it to
+ * stop messing up with our variables.
+ */
+function disarm(val: JsonValue): JsonValue {
+    if (isObject(val)) {
+        return Object.fromEntries(
+            Object.entries(val).map(([key, value]) => [key, disarm(value)])
+        );
+    } else if (isArray(val)) {
+        return val.map(disarm);
+    } else if (typeof val === "string") {
+        return val.replace(/\$/g, "$$");
+    } else {
+        return val;
+    }
 }
