@@ -10,6 +10,8 @@ interface MozartOptions {
     imageTemplate: string;
     /** Environment variables for each service, $ is the compose environment. */
     environments: Record<string, Record<string, string>>;
+    /** The name of the project to deploy */
+    projectName: string;
 }
 /**
  * The composer (Mozart, compose, ...) in charge of composing the compose file

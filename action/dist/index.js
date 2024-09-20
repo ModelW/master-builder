@@ -53151,14 +53151,19 @@ function getEnv() {
 function getSshConfig() {
     return (0, mb_1.parseSshUrl)(core.getInput("ssh_url"), core.getInput("ssh_private_key"));
 }
+/** Guess the project name from inputs or context */
+function getProjectName() {
+    return core.getInput("project_name") || github.context.repo.repo;
+}
 /**
  * Reads and validates the input(s) regarding the deployment in itself
  * @param composeFile The generated compose file
+ * @param projectName The name of the project to deploy
  */
-function getDeploy(composeFile) {
+function getDeploy(composeFile, projectName) {
     return {
         composeFile: composeFile,
-        projectName: github.context.repo.repo,
+        projectName,
         after: (0, mb_1.parseCommands)(core.getInput("after")),
         before: (0, mb_1.parseCommands)(core.getInput("before")),
     };
@@ -53168,12 +53173,14 @@ function getDeploy(composeFile) {
  */
 async function main() {
     try {
+        const projectName = getProjectName();
         const compose = await (0, mozart_1.mozart)({
             composeDir: await getComposeDir(),
             imageTemplate: core.getInput("image_tpl"),
             environments: getEnv(),
+            projectName: projectName,
         });
-        const deployConfig = getDeploy(compose);
+        const deployConfig = getDeploy(compose, projectName);
         const options = {
             ssh: getSshConfig(),
             command: core.getInput("master_builder_command"),
@@ -53347,6 +53354,7 @@ const resolving_1 = __nccwpck_require__(8730);
 const hydroyaml_1 = __nccwpck_require__(689);
 const obj_manip_1 = __nccwpck_require__(9317);
 const node_path_1 = __nccwpck_require__(9411);
+const node_crypto_1 = __nccwpck_require__(6005);
 const exec = (0, node_util_1.promisify)(node_child_process_1.exec);
 /**
  * The composer (Mozart, compose, ...) in charge of composing the compose file
@@ -53375,6 +53383,7 @@ async function mozart(options) {
     let patched = composeFile;
     patched = await substituteImages(patched, serviceMap, imageTemplate);
     patched = injectEnvironment(patched, serviceMap, options.environments);
+    patched = fixName(options.projectName, patched);
     return JSON.stringify(patched);
 }
 /**
@@ -53497,6 +53506,23 @@ function makeServiceMap(composeFile) {
         }
     });
     return out;
+}
+/**
+ * Compose automatically adds the 'name' attribute at the root of the compose
+ * file, but it's not good for our blue/green strategy because you'll shut
+ * down the new deployment when shutting down the old one. Se we make a new
+ * name that consists of the GHA input name and suffix it with a 8-char
+ * hash of the current compose file's + current timestamp hash.
+ *
+ * @param projectName The name of the project to deploy
+ * @param composeFile The compose file to fix
+ */
+function fixName(projectName, composeFile) {
+    const asString = `${new Date().getTime()}:${JSON.stringify(composeFile)}`;
+    const hash = (0, node_crypto_1.createHash)("sha256");
+    hash.update(asString);
+    const name = `${projectName}-${hash.digest("hex").slice(0, 8)}`;
+    return { ...composeFile, name };
 }
 
 
@@ -53689,6 +53715,14 @@ module.exports = require("net");
 
 "use strict";
 module.exports = require("node:child_process");
+
+/***/ }),
+
+/***/ 6005:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:crypto");
 
 /***/ }),
 
