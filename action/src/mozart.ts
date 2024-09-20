@@ -8,6 +8,7 @@ import {
 import { fromString } from "@model-w/hydroyaml";
 import { deepResolve, isObject } from "./obj-manip";
 import { basename } from "node:path";
+import { createHash } from "node:crypto";
 
 const exec = promisify(execNode);
 
@@ -23,6 +24,8 @@ interface MozartOptions {
     imageTemplate: string;
     /** Environment variables for each service, $ is the compose environment. */
     environments: Record<string, Record<string, string>>;
+    /** The name of the project to deploy */
+    projectName: string;
 }
 
 /**
@@ -59,6 +62,7 @@ export async function mozart(options: MozartOptions): Promise<string> {
     let patched = composeFile;
     patched = await substituteImages(patched, serviceMap, imageTemplate);
     patched = injectEnvironment(patched, serviceMap, options.environments);
+    patched = fixName(options.projectName, patched);
 
     return JSON.stringify(patched);
 }
@@ -227,4 +231,23 @@ function makeServiceMap(composeFile: JsonValue): Record<string, string> {
     });
 
     return out;
+}
+
+/**
+ * Compose automatically adds the 'name' attribute at the root of the compose
+ * file, but it's not good for our blue/green strategy because you'll shut
+ * down the new deployment when shutting down the old one. Se we make a new
+ * name that consists of the GHA input name and suffix it with a 8-char
+ * hash of the current compose file's + current timestamp hash.
+ *
+ * @param projectName The name of the project to deploy
+ * @param composeFile The compose file to fix
+ */
+function fixName(projectName: string, composeFile: JsonObject): JsonObject {
+    const asString = `${new Date().getTime()}:${JSON.stringify(composeFile)}`;
+    const hash = createHash("sha256");
+    hash.update(asString);
+    const name = `${projectName}-${hash.digest("hex").slice(0, 8)}`;
+
+    return { ...composeFile, name };
 }

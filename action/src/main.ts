@@ -55,14 +55,20 @@ function getSshConfig(): SshOptions {
     );
 }
 
+/** Guess the project name from inputs or context */
+function getProjectName(): string {
+    return core.getInput("project_name") || github.context.repo.repo;
+}
+
 /**
  * Reads and validates the input(s) regarding the deployment in itself
  * @param composeFile The generated compose file
+ * @param projectName The name of the project to deploy
  */
-function getDeploy(composeFile: string): DeployOptions {
+function getDeploy(composeFile: string, projectName: string): DeployOptions {
     return {
         composeFile: composeFile,
-        projectName: github.context.repo.repo,
+        projectName,
         after: parseCommands(core.getInput("after")),
         before: parseCommands(core.getInput("before")),
     };
@@ -73,13 +79,15 @@ function getDeploy(composeFile: string): DeployOptions {
  */
 export async function main(): Promise<void> {
     try {
+        const projectName = getProjectName();
         const compose = await mozart({
             composeDir: await getComposeDir(),
             imageTemplate: core.getInput("image_tpl"),
             environments: getEnv(),
+            projectName: projectName,
         });
 
-        const deployConfig = getDeploy(compose);
+        const deployConfig = getDeploy(compose, projectName);
         const options = {
             ssh: getSshConfig(),
             command: core.getInput("master_builder_command"),
