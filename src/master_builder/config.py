@@ -22,6 +22,8 @@ class PersistedConfig:
     init_done: bool = False
     enable_https: bool = False
     ssl_contact: str = ""
+    ssl_key: str = ""
+    ssl_cert: str = ""
 
 
 @dataclass
@@ -39,6 +41,10 @@ class Config:
     @property
     def ingress_dir(self) -> Path:
         return self.home / "ingress"
+
+    @property
+    def traefik_dynamic_file(self) -> Path:
+        return self.ingress_dir / "dynamic.yaml"
 
     @property
     def letsencrypt_dir(self) -> Path:
