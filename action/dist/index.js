@@ -53214,6 +53214,7 @@ async function main() {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.shQuote = shQuote;
 exports.parseSshUrl = parseSshUrl;
 exports.parseCommands = parseCommands;
 exports.deploy = deploy;
@@ -53355,6 +53356,7 @@ const hydroyaml_1 = __nccwpck_require__(689);
 const obj_manip_1 = __nccwpck_require__(9317);
 const node_path_1 = __nccwpck_require__(9411);
 const node_crypto_1 = __nccwpck_require__(6005);
+const mb_1 = __nccwpck_require__(4773);
 const exec = (0, node_util_1.promisify)(node_child_process_1.exec);
 /**
  * The composer (Mozart, compose, ...) in charge of composing the compose file
@@ -53470,16 +53472,30 @@ function injectEnvironment(composeFile, serviceMap, env) {
                 serviceName,
                 {
                     ...service,
-                    environment: {
-                        ...env[serviceMap[serviceName]],
-                        ...((0, obj_manip_1.isObject)(service.environment)
-                            ? service.environment
-                            : {}),
-                    },
+                    environment: mergeEnvironments(env[serviceMap[serviceName]] || {}, service.environment),
                 },
             ];
         })),
     };
+}
+/**
+ * Takes into account the original format of the environment parameter (which
+ * can be either an object or an array of strings) and merges the two together.
+ */
+function mergeEnvironments(additionalEnv, originalEnv) {
+    if ((0, obj_manip_1.isArray)(originalEnv)) {
+        const additionalEnvArray = Object.entries(additionalEnv).map(([key, value]) => `${key}=${(0, mb_1.shQuote)(value)}`);
+        return [...additionalEnvArray, ...originalEnv];
+    }
+    else if ((0, obj_manip_1.isObject)(originalEnv)) {
+        return {
+            ...additionalEnv,
+            ...originalEnv,
+        };
+    }
+    else {
+        return additionalEnv;
+    }
 }
 /**
  * Makes a map of service name to component name. The component name is just the
@@ -53562,7 +53578,7 @@ exports.deepResolve = deepResolve;
  * @param value The value to check
  */
 function isObject(value) {
-    return typeof value === "object" && value !== null;
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 /**
  * Checks whether a value is an array

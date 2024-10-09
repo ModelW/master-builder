@@ -88,7 +88,7 @@ type reporter = (message: string) => void;
  * @param str The string to quote
  * @returns The quoted string
  */
-function shQuote(str: string): string {
+export function shQuote(str: string): string {
     if (!str) {
         return "''";
     }

@@ -7,7 +7,7 @@ type JsonPromise = JsonValue | Promise<JsonValue>;
  * @param value The value to check
  */
 export function isObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

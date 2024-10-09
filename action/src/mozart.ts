@@ -9,6 +9,7 @@ import { fromString } from "@model-w/hydroyaml";
 import { deepResolve, isArray, isObject } from "./obj-manip";
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
+import { shQuote } from "./mb";
 
 const exec = promisify(execNode);
 
@@ -187,17 +188,38 @@ function injectEnvironment(
                     serviceName,
                     {
                         ...service,
-                        environment: {
-                            ...env[serviceMap[serviceName]],
-                            ...(isObject(service.environment)
-                                ? service.environment
-                                : {}),
-                        },
+                        environment: mergeEnvironments(
+                            env[serviceMap[serviceName]] || {},
+                            service.environment
+                        ),
                     },
                 ];
             })
         ),
     };
+}
+
+/**
+ * Takes into account the original format of the environment parameter (which
+ * can be either an object or an array of strings) and merges the two together.
+ */
+function mergeEnvironments(
+    additionalEnv: Record<string, string>,
+    originalEnv: any
+): Record<string, string> | string[] {
+    if (isArray(originalEnv)) {
+        const additionalEnvArray = Object.entries(additionalEnv).map(
+            ([key, value]) => `${key}=${shQuote(value)}`
+        );
+        return [...additionalEnvArray, ...(originalEnv as string[])];
+    } else if (isObject(originalEnv)) {
+        return {
+            ...additionalEnv,
+            ...(originalEnv as Record<string, string>),
+        };
+    } else {
+        return additionalEnv;
+    }
 }
 
 /**

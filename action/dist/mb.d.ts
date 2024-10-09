@@ -73,6 +73,13 @@ export interface DeployOutput {
  */
 type reporter = (message: string) => void;
 /**
+ * Quotes a string for the shell
+ *
+ * @param str The string to quote
+ * @returns The quoted string
+ */
+export declare function shQuote(str: string): string;
+/**
  * Parses a SSH URL into an object which can be used to connect to the server.
  * The URL must be in the format `ssh://[user[:password]@]host[:port]`. If the
  * private key is provided the password is used as the passphrase, otherwise the
