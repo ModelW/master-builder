@@ -53554,7 +53554,7 @@ function disarm(val) {
         return val.map(disarm);
     }
     else if (typeof val === "string") {
-        return val.replace(/\$/g, "$$");
+        return val.replace(/\$/g, "$$$$");
     }
     else {
         return val;

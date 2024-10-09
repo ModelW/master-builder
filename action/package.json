@@ -17,7 +17,7 @@
         "@types/ssh2": "*",
         "@vercel/ncc": "*",
         "prettier": "*",
-        "ssh2": "^1.16.0",
+        "ssh2": "*",
         "typescript": "*",
         "yaml": "*"
     }

@@ -2,6 +2,7 @@ import rich_click as click
 from rich.console import Console
 
 from .config import Config
+from .errors import ErrorForUser
 from .reporting import action, handle_fatal, run_command, success
 
 console = Console()
@@ -64,6 +65,48 @@ networks:
     external: true
 """
 
+TRAEFIK_COMPOSE_HTTPS_STATIC = """
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.file.directory=/etc/traefik/dynamic/"
+      - "--providers.file.watch=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "{cert_file}:/etc/traefik/ssl/default.crt:ro"
+      - "{key_file}:/etc/traefik/ssl/default.key:ro"
+      - "{dynamic_file}:/etc/traefik/dynamic/dynamic.yaml:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+
+networks:
+  default:
+    name: traefik
+    external: true
+"""
+
+TRAEFIK_DYNAMIC_FILE = """
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/etc/traefik/ssl/default.crt"
+        keyFile: "/etc/traefik/ssl/default.key"
+"""
+
 
 def generate_compose() -> str:
     config = Config.instance()
@@ -72,10 +115,20 @@ def generate_compose() -> str:
     config.letsencrypt_dir.mkdir(parents=True, exist_ok=True)
 
     if persisted.enable_https:
-        return TRAEFIK_COMPOSE_HTTPS.format(
-            ssl_contact=persisted.ssl_contact,
-            letsencrypt_dir=config.letsencrypt_dir,
-        )
+        if persisted.ssl_contact:
+            return TRAEFIK_COMPOSE_HTTPS.format(
+                ssl_contact=persisted.ssl_contact,
+                letsencrypt_dir=config.letsencrypt_dir,
+            )
+        elif persisted.ssl_key and persisted.ssl_cert:
+            return TRAEFIK_COMPOSE_HTTPS_STATIC.format(
+                cert_file=persisted.ssl_cert,
+                key_file=persisted.ssl_key,
+                dynamic_file=config.traefik_dynamic_file,
+            )
+        else:
+            msg = "Invalid configuration"
+            raise ErrorForUser(msg)
     else:
         return TRAEFIK_COMPOSE_HTTP
 
@@ -101,6 +154,37 @@ def ensure_traefik_compose():
 
         with action(f"{verb} Traefik Docker Compose file"):
             compose_file.write_text(expected_content)
+
+
+def ensure_traefik_dynamic():
+    """
+    Ensures that the Traefik dynamic configuration file exists.
+    """
+
+    config = Config.instance()
+    persisted = config.persisted
+    dynamic_file = config.traefik_dynamic_file
+    need_dynamic = persisted.enable_https and persisted.ssl_cert
+
+    if not need_dynamic:
+        if dynamic_file.exists():
+            with action("Deleting Traefik dynamic configuration file"):
+                dynamic_file.unlink()
+
+        return
+
+    existing_content = ""
+
+    if dynamic_file.exists():
+        existing_content = dynamic_file.read_text()
+
+    expected_content = TRAEFIK_DYNAMIC_FILE
+
+    if existing_content != expected_content:
+        verb = "Updating" if dynamic_file.exists() else "Creating"
+
+        with action(f"{verb} Traefik dynamic configuration file"):
+            dynamic_file.write_text(expected_content)
 
 
 def is_running() -> bool:
@@ -150,6 +234,7 @@ def start_ingress():
 
     ingress_dir = Config.instance().ingress_dir
     ensure_traefik_compose()
+    ensure_traefik_dynamic()
     ensure_network()
 
     if not is_running():
