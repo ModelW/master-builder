@@ -70,8 +70,6 @@ export interface DeployOptions {
  * The outcome of the deployment
  */
 export interface DeployOutput {
-    /** The standard error output of the deployment */
-    stderr: string;
     /** Whether the deployment was successful */
     success: boolean;
 }
@@ -190,6 +188,7 @@ export function deploy(
             conn.exec(cmd, (err, stream) => {
                 if (err) {
                     reject(err);
+                    return;
                 }
 
                 stream.stdin.write(deploy.composeFile, () => {
@@ -200,9 +199,12 @@ export function deploy(
                     reporter(data.toString());
                 });
 
+                stream.stderr.on("data", (data: Buffer | string) => {
+                    reporter(data.toString());
+                });
+
                 stream.on("close", (code: number) => {
                     resolve({
-                        stderr: stream.stderr?.read().toString() || "",
                         success: code === 0,
                     });
                 });
@@ -221,7 +223,7 @@ export function deploy(
                           passphrase: host.ssh.credentials.passphrase,
                       }
                     : {
-                          privateKey: host.ssh.credentials.password,
+                          password: host.ssh.credentials.password,
                       }),
             });
     });

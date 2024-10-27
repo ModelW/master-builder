@@ -103,7 +103,7 @@ export async function main(): Promise<void> {
 
         if (!outcome.success) {
             // noinspection ExceptionCaughtLocallyJS
-            throw new Error(`Master Builder failed:\n${outcome.stderr}`);
+            throw new Error(`Master Builder failed`);
         }
     } catch (e) {
         if (e instanceof Error) {
