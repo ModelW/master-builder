@@ -62,8 +62,6 @@ export interface DeployOptions {
  * The outcome of the deployment
  */
 export interface DeployOutput {
-    /** The standard error output of the deployment */
-    stderr: string;
     /** Whether the deployment was successful */
     success: boolean;
 }
