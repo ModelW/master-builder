@@ -68,6 +68,8 @@ def deploy(before: list[str], after: list[str], no_pull: bool, project_name: str
         with action("Running after commands"):
             _run_service_commands(deploy_dir, after)
 
+    _prune_docker()
+
     success(f"Deployment of {project_name} completed successfully.")
 
 
@@ -129,3 +131,11 @@ def _run_service_commands(deploy_dir: Path, commands: list[str]):
             case _:
                 msg = f"Invalid command format: {cmd}, expected <service>:<command>"
                 raise ErrorForUser(msg)
+
+
+def _prune_docker():
+    """
+    Removes all unused images to free up space as we go
+    """
+
+    run_command(["docker", "system", "prune", "-a", "-f"])
