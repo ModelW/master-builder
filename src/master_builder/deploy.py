@@ -68,7 +68,8 @@ def deploy(before: list[str], after: list[str], no_pull: bool, project_name: str
         with action("Running after commands"):
             _run_service_commands(deploy_dir, after)
 
-    _prune_docker()
+    with action("Prune Docker"):
+        _prune_docker()
 
     success(f"Deployment of {project_name} completed successfully.")
 
