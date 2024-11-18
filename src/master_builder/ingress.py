@@ -12,6 +12,7 @@ TRAEFIK_COMPOSE_HTTP = """---
 services:
   traefik:
     image: traefik:v3.1
+    restart: always
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -37,6 +38,7 @@ TRAEFIK_COMPOSE_HTTPS = """---
 services:
   traefik:
     image: traefik:v3.1
+    restart: always
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -69,6 +71,7 @@ TRAEFIK_COMPOSE_HTTPS_STATIC = """
 services:
   traefik:
     image: traefik:v3.1
+    restart: always
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
